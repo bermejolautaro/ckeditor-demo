@@ -10,11 +10,32 @@
   </div>
 
   <!-- BASIC CONFIG -->
-  <div class="container">
+  <div class="container pb-3">
     <div class="row">
       <div class="col">
         <h5 class="pb-3">Editor with basic configuration</h5>
         <ckeditor [editor]="Editor" data="<p>Hello, world!</p>"></ckeditor>
+      </div>
     </div>
   </div>
+
+  <!-- BASIC COMMENTS EXAMPLE -->
+  <div class="container pb-3">
+    <div class="row mb-3">
+      <div class="col">
+        <h5 class="pb-3">Basic comments box example</h5>
+        <ckeditor [(ngModel)]="model.editorData" [editor]="Editor"></ckeditor>
+        <button class="btn btn-primary mt-2" (click)="onClickAddComment()">Add comment</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <ul class="list-group">
+          <li class="list-group-item" *ngFor="let comment of comments" [innerHtml]="comment"></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
 </div>

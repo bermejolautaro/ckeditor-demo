@@ -11,4 +11,15 @@ export class AppComponent {
   title = 'ckeditor-demo';
   public Editor = ClassicEditor;
 
+  public model = {
+    editorData: ''
+  };
+
+  public comments: string[] = ['A comment'];
+
+  public onClickAddComment(): void {
+    this.comments.push(this.model.editorData);
+    this.model.editorData = '';
+  }
+
 }
