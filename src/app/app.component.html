@@ -1,6 +1,20 @@
-<div class="header">
-  <h1>CKEditor Demo</h1>
-</div>
-<div class="container">
-  <ckeditor [editor]="Editor" data="<p>Hello, world!</p>"></ckeditor>
+<div class="container py-5">
+
+  <!-- HEADER -->
+  <div class="container pb-3">
+    <div class="row">
+      <div class="col">
+        <h1>CKEditor Demo</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- BASIC CONFIG -->
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <h5 class="pb-3">Editor with basic configuration</h5>
+        <ckeditor [editor]="Editor" data="<p>Hello, world!</p>"></ckeditor>
+    </div>
+  </div>
 </div>
