@@ -40,3 +40,12 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+ckeditor5-angular/.angular/cache
+ckeditor5-angular/.sass-cache/
+ckeditor5-angular/connect.lock
+ckeditor5-angular/coverage
+ckeditor5-angular/libpeerconnection.log
+ckeditor5-angular/testem.log
+ckeditor5-angular/typings
+ckeditor5-angular/node_modules
