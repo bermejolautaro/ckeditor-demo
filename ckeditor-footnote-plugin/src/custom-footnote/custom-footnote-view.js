@@ -19,9 +19,6 @@ export class FormView extends View {
 
 		this._updateDropdown();
 
-		this.footnoteInputView = this._createInput('Add footnote');
-		this.contentInputView = this._createInput('Add content');
-
 		this.saveButtonView = this._createButton('Save', icons.check, 'ck-button-save');
 		this.saveButtonView.type = 'submit';
 
@@ -30,8 +27,6 @@ export class FormView extends View {
 
 		this.childViews = this.createCollection([
 			this.dropdownView,
-			this.footnoteInputView,
-			this.contentInputView,
 			this.saveButtonView,
 			this.cancelButtonView
 		]);

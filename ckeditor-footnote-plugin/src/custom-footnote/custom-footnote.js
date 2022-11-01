@@ -2,6 +2,7 @@ import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
 import ButtonView from '@ckeditor/ckeditor5-ui/src/button/buttonview';
 import { ContextualBalloon, clickOutsideHandler } from '@ckeditor/ckeditor5-ui';
 import { FormView } from './custom-footnote-view';
+import { viewToModelPositionOutsideModelElement } from '@ckeditor/ckeditor5-widget/src/utils';
 import './styles.css';
 
 export class CustomFootnote extends Plugin {
@@ -20,6 +21,16 @@ export class CustomFootnote extends Plugin {
 		this._balloon = this.editor.plugins.get(ContextualBalloon);
 		this.formView = this._createFormView();
 
+		const viewDocument = editor.editing.view.document;
+
+		this.listenTo(viewDocument, 'click', () => {
+			const footnote = this._getNonLinkFootnote();
+
+			if(footnote) {
+				this._toggleModal('NISADNAS');
+			}
+		})
+
         editor.ui.componentFactory.add('custom-footnote', () => {
             const button = new ButtonView()
             button.set( {
@@ -31,30 +42,46 @@ export class CustomFootnote extends Plugin {
             button.on( 'execute', () => {
                 // Change the model using the model writer.
 				this._showUI();
-				const selection = editor.model.document.selection;
-				const title = 'TITULO LAUCHA';
-
-                editor.model.change( writer => {
-
-                    // Insert the text at the user's current position.
-                    editor.model.insertContent( writer.createText(this.footnoteCount + '', { superscript: title }));
-					this.footnoteCount += 1;
-                } );
             } );
 
             return button;
 		})
 	}
 
+	_getNonLinkFootnote() {
+		const view = this.editor.editing.view;
+		const selection = view.document.selection;
+		const selectedElement = selection.getSelectedElement();
+
+		console.log(selectedElement);
+
+		return selectedElement?.name === 'sup';
+	}
+
 	_getFootnotes() {
 		return this.editor.config._config['getFootnotes']();
+	}
+
+	_toggleModal(modalText) {
+		this.editor.config._config['toggleModal'](modalText);
 	}
 
 	_defineSchema() {
 		const schema = this.editor.model.schema;
 
-		schema.extend('$text', {
-			allowAttributes: ['superscript']
+		schema.register('footnote-non-link', {
+			inheritAllFrom: 'text',
+			allowAttributes: ['footnoteNotLink'],
+			isObject: true,
+			isInline: true
+		})
+
+		schema.register('custom-footnote-element', {
+			isObject: true,
+			isInline: true,
+			allowWhere: '$text',
+			allowAttributes: ['footnote-count', 'footnote-content'],
+			allowChildren: '$text'
 		});
 	}
 
@@ -62,28 +89,28 @@ export class CustomFootnote extends Plugin {
 		const conversion = this.editor.conversion;
 
 		conversion.for('downcast').attributeToElement({
-			model: 'superscript',
-			view: (modelAttributeValue, conversionApi) => {
+			model: 'footnote-non-link',
+			view: (modelElement, conversionApi) => {
 				const { writer } = conversionApi;
-
-				return writer.createAttributeElement('a', {
-					href: modelAttributeValue
-				});
+				const footnoteNotLink =  writer.createAttributeElement('sup');
+				writer.setCustomProperty(footnoteNotLink, { footnoteNotLink: true });
 			}
 		})
 
-		conversion.for('upcast').elementToAttribute({
-			view: {
-				name: 'super',
-				attributes: [ 'title' ]
-			},
-			model: {
-				key: 'superscript',
-				value: viewElement => {
-					const title = viewElement.getAttribute('href');
+		conversion.for('downcast').elementToElement({
+			model: 'custom-footnote-element',
+			view: (modelElement, conversionApi) => {
+				const { writer } = conversionApi;
+				const url = modelElement.getAttribute('footnote-content');
+				const footnoteId = `${modelElement.getAttribute('footnote-count')}`;
+				const result =
+					writer.createContainerElement('sup', { class: 'custom-footnote-element' }, [
+						writer.createContainerElement('a', { href: url, linkHref: url }, [
+							writer.createText(footnoteId)
+						])
+					]);
 
-					return title;
-				}
+				return result;
 			}
 		})
 	}
@@ -91,19 +118,48 @@ export class CustomFootnote extends Plugin {
 	_createFormView() {
 		const editor = this.editor;
 		const formView =  new FormView(this.editor.locale, this._getFootnotes());
+		let dropdownSelection = null;
+
+		this.editor.editing.mapper.on(
+            'viewToModelPosition',
+            viewToModelPositionOutsideModelElement( this.editor.model, viewElement => viewElement.hasClass( 'custom-footnote-element' ) )
+        );
+
+		this.listenTo(formView.dropdownView, 'execute', evt => {
+			dropdownSelection = evt.source.label
+			formView.dropdownView.buttonView.label = dropdownSelection;
+			editor.editing.view.focus();
+		})
 
 		this.listenTo(formView, 'submit', () => {
-			const footnote = formView.footnoteInputView.fieldView.element.value;
-			const content = formView.contentInputView.fieldView.element.value;
+			if(!dropdownSelection) {
+				return;
+			}
+
+			const footnoteId = `[${this.footnoteCount}]`
+			const selection = this.editor.model.document.selection;
 
 			editor.model.change(writer => {
-				editor.model.insertContent(writer.createText(content, { superscript: footnote }))
+				const footnoteElement =
+					dropdownSelection.startsWith('www')
+						? writer.createText(footnoteId, { superscript: true, linkHref: `http://${dropdownSelection}` })
+						: writer.createText(footnoteId, { superscript: true, footnoteNotLink: true });
+
+				editor.model.insertContent(
+					footnoteElement,
+					selection.getLastPosition()
+				);
+
+				writer.setSelection(footnoteElement, 'after');
 			});
 
+
+			this.footnoteCount += 1;
 			this._hideUI();
 		})
 
 		this.listenTo(formView, 'cancel', () => {
+			this._toggleModal('HELLO FROM PLUGIN')
 			this._hideUI();
 		});
 
@@ -135,12 +191,7 @@ export class CustomFootnote extends Plugin {
 	}
 
 	_hideUI() {
-		this.formView.footnoteInputView.fieldView.value = '';
-		this.formView.contentInputView.fieldView.value = '';
-		this.formView.element.reset();
-
 		this._balloon.remove(this.formView);
-
 		this.editor.editing.view.focus();
 	}
 }
